@@ -18,7 +18,9 @@ package com.datamountaineer.streamreactor.connect.converters.source
 import java.io.File
 import java.util.Collections
 
+import com.datamountaineer.streamreactor.connect.config.base.const.TraitConfigConst
 import com.datamountaineer.streamreactor.connect.converters.MsgKey
+import com.datamountaineer.streamreactor.connect.schemas.SchemaRegistry
 import io.confluent.connect.avro.AvroData
 import org.apache.avro.generic.{GenericDatumReader, GenericRecord}
 import org.apache.avro.io.DecoderFactory
@@ -98,16 +100,31 @@ object AvroConverter {
       .map(_.split("="))
       .map {
         case Array(source, path) =>
-          val file = new File(path)
-          if (!file.exists()) {
-            throw new ConfigException(s"Invalid $SCHEMA_CONFIG. The file $path doesn't exist!")
-          }
           val s = source.trim.toLowerCase()
           if (s.isEmpty) {
             throw new ConfigException(s"Invalid $SCHEMA_CONFIG. The topic is not valid for entry containing $path")
           }
-          s -> new AvroSchema.Parser().parse(file)
+          val maybeRegistryUrl = config.get(TraitConfigConst.SCHEMA_REGISTRY_SUFFIX)
+          s -> maybeRegistryUrl
+            .map{ url => resolveFromURL(path, url) }
+            .getOrElse{ resolveFromFile(path) }
         case other => throw new ConfigException(s"$SCHEMA_CONFIG is not properly set. The format is Mqtt_Source->AVRO_FILE")
       }.toMap
+  }
+
+  private def resolveFromFile(path: String) = {
+    val file = new File(path)
+    if (!file.exists()) {
+      throw new ConfigException(s"Invalid $SCHEMA_CONFIG. The file $path doesn't exist!")
+    }
+    new AvroSchema.Parser().parse(file)
+  }
+
+  private def resolveFromURL(path: String, url: String) = {
+    val schema = SchemaRegistry.getSchema(url, path)
+    if(schema.isEmpty) {
+      throw new ConfigException(s"Invalid $SCHEMA_CONFIG. SchemaRegistry $url contains no schema for $path")
+    }
+    new AvroSchema.Parser().parse(schema)
   }
 }

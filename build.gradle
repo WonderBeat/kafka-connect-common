@@ -105,6 +105,7 @@ allprojects {
         testCompile "junit:junit:$junit"
         testCompile "org.apache.curator:curator-test:3.1.0"
         testCompile 'org.powermock:powermock-module-junit4:1.6.5'
+        testCompile 'com.github.tomakehurst:wiremock:2.23.2'
         testRuntime 'org.pegdown:pegdown:1.1.0'
     }
 
