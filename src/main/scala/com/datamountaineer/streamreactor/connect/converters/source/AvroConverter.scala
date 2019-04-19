@@ -95,6 +95,7 @@ object AvroConverter {
   def getSchemas(config: Map[String, String]): Map[String, AvroSchema] = {
     config.getOrElse(SCHEMA_CONFIG, throw new ConfigException(s"$SCHEMA_CONFIG is not provided"))
       .toString
+      .replace("\"","")
       .split(';')
       .filter(_.trim.nonEmpty)
       .map(_.split("="))
